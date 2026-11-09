@@ -1,0 +1,313 @@
+
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TRACKER">
+<title>TRACKER — Portafoglio</title>
+<style>
+:root{
+  --bg:#0b1220; --sur:#141d2e; --sur2:#1b2740; --txt:#e2e8f0; --mut:#94a3b8;
+  --acc:#60a5fa; --pos:#4ade80; --neg:#f87171; --amb:#fbbf24; --bor:#243250;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+body{margin:0; background:var(--bg); color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:16px; padding-bottom:110px; padding-top:env(safe-area-inset-top)}
+h1{font-size:20px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; margin:14px 16px 2px}
+.sub{color:var(--mut); font-size:13px; margin:0 16px 12px}
+nav{display:flex; flex-wrap:wrap; gap:4px; padding:6px 8px; position:sticky; top:0;
+  background:rgba(11,18,32,.96); z-index:10; border-bottom:1px solid var(--bor)}
+nav button{flex:1 1 30%; background:none; border:none; border-bottom:3px solid transparent;
+  color:var(--txt); opacity:.9; font-weight:700; font-size:12px; letter-spacing:.5px;
+  text-transform:uppercase; padding:10px 4px; cursor:pointer;
+  text-shadow:0 1px 2px rgba(0,0,0,.4); border-radius:8px 8px 0 0}
+nav button.act{background:rgba(255,255,255,.07); border-bottom-color:var(--c)}
+section{display:none; padding:4px 12px}
+section.act{display:block}
+.card{background:var(--sur); border:1px solid var(--bor); border-radius:12px;
+  padding:12px 14px; margin:10px 0; display:flex; flex-direction:column; gap:3px}
+.card .k{font-size:13px; color:var(--mut); font-weight:600; text-transform:uppercase; letter-spacing:.4px}
+.card .v{font-size:19px; font-weight:700; white-space:normal; text-align:right}
+.card .dim{font-size:12px; color:var(--mut); text-align:right}
+.hero{background:rgba(74,222,128,.16); border-color:var(--pos)}
+.hero .v{font-size:22px; font-weight:800; color:var(--pos)}
+.pos .v{color:var(--pos)} .neg .v{color:var(--neg)}
+.row{display:flex; gap:8px; flex-wrap:wrap}
+.row .card{flex:1 1 45%; margin:0}
+fieldset{border:1px solid var(--bor); border-radius:12px; margin:12px 0; padding:10px 12px 14px}
+legend{font-size:13px; font-weight:700; color:var(--acc); text-transform:uppercase; letter-spacing:.4px; padding:0 6px}
+label{display:block; font-size:13px; color:var(--mut); font-weight:600; margin:8px 0 3px}
+label a{color:var(--acc); text-decoration:none; font-weight:700}
+input,select{width:100%; background:var(--sur2); color:var(--txt); border:1px solid var(--bor);
+  border-radius:9px; padding:10px 10px; font-size:16px; outline:none}
+input:focus,select:focus{border-color:var(--acc)}
+.g2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.g3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+.links{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+.links button{flex:1 1 30%; background:var(--sur2); color:var(--txt); border:1px solid var(--bor);
+  border-radius:9px; padding:10px 6px; font-size:13px; font-weight:700; cursor:pointer}
+.links button.on{border-color:var(--acc); color:var(--acc); background:rgba(96,165,250,.12)}
+.links button.del{border-color:rgba(248,113,113,.4); color:var(--neg)}
+.bigbtn{width:100%; background:var(--acc); color:#0b1220; border:none; border-radius:12px;
+  padding:14px; font-size:16px; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
+  margin:12px 0; cursor:pointer}
+table.cal{width:100%; border-collapse:collapse; font-size:15px; margin:10px 0}
+table.cal th{color:var(--mut); font-size:12px; text-transform:uppercase; padding:8px 6px;
+  border-bottom:2px solid var(--bor); text-align:left}
+table.cal td{padding:10px 6px; border-bottom:1px solid var(--bor)}
+table.cal td.num{text-align:right; font-weight:700}
+table.cal tr.tot td{border-top:2px solid var(--acc); font-weight:800}
+.pcard{background:var(--sur); border:1px solid var(--bor); border-radius:12px; margin:12px 0; overflow:hidden}
+.pcard .head{display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; background:var(--sur2)}
+.pcard .head .nm{font-weight:800; font-size:15px}
+.pcard .head .tp{font-size:12px; color:var(--mut); font-weight:700}
+.pcard .head button{background:none; border:none; color:var(--neg); font-size:17px; padding:4px 8px; cursor:pointer}
+.pcard .outs{display:flex; flex-wrap:wrap; gap:6px; padding:10px 12px 2px}
+.pcard .outs .o{flex:1 1 30%; min-width:90px}
+.pcard .outs .o .k{font-size:10px; color:var(--mut); text-transform:uppercase; font-weight:700}
+.pcard .outs .o .v{font-size:15px; font-weight:800}
+.pcard .body{padding:2px 12px 12px}
+.note{font-size:13px; color:var(--mut); line-height:1.7; padding:6px 16px 20px}
+.note b{color:var(--txt)}
+.fempty{color:var(--mut); text-align:center; padding:26px 16px; font-size:14px}
+nav button:nth-child(1){--c:#60a5fa}
+nav button:nth-child(2){--c:#e879f9}
+nav button:nth-child(3){--c:#f472b6}
+@media(max-width:479px){nav button{flex:1 1 30%}}
+</style>
+</head>
+<body>
+<h1>📊 Tracker Portafoglio</h1>
+<p class="sub">Bond · ETF · ETN · Certificati — P&L, rendimenti e cedole nette</p>
+
+<nav>
+<button id="navPos" class="act" onclick="showTab('pos','navPos')">Posizioni</button>
+<button id="navCal" onclick="showTab('cal','navCal')">Cedole</button>
+<button id="navIst" onclick="showTab('ist','navIst')">Istruzioni</button>
+</nav>
+
+<section id="pos" class="act">
+  <div id="summary"></div>
+  <button class="bigbtn" onclick="addPos()">＋ Aggiungi posizione</button>
+  <div id="plist"></div>
+</section>
+
+<section id="cal">
+  <div id="calOut"></div>
+  <p class="note">Il calendario raggruppa per <b>mese</b> le cedole nette delle posizioni con la
+  «Data prossima cedola» compilata: tieni nel vivaio solo le date dei prossimi 12 mesi e
+  aggiornale man mano che incassi. Il conteggio è indipendente dall'anno.</p>
+</section>
+
+<section id="ist">
+  <p class="note" style="font-size:15px; line-height:1.8; color:#e2e8f0">
+  <b>1 · COSA FA.</b> Posizioni con investito, valore attuale, P&L (€ e %), rendimento immediato
+  (cedola ÷ prezzo, la convenzione del tuo calcolatore) e cedola netta per pagamento con
+  aliquota selezionabile 12,5% (titoli di Stato) o 26% (corporate). La tab Cedole somma le
+  entrate per mensilità.<br><br>
+  <b>2 · COMPILAZIONE.</b> Per i <b>Bond</b> la Quantità è il nominale e i prezzi in % del
+  nominale; la Cedola è la % annua (BTP semestrale = cedola del listino × 2). Per
+  <b>ETF/ETN/Certificati</b> la Quantità è il numero di quote, il prezzo è per quota e la
+  Cedola è il dividendo annuo per quota in valuta. Per l'oro/titoli in valuta: cambio 1 EUR =
+  X valuta (stile BCE: si divide) — batti 💱 per riempire il cambio di riferimento e apri il
+  link per il live di Google Finance.<br><br>
+  <b>3 · PREZZI.</b> Si aggiornano a mano dal terminale Directa (10 secondi): nessuna fonte
+  gratuita leggibile esiste per le quotazioni ETF live, e per l'esecuzione il terminale è
+  comunque l'unico dato che conta.<br><br>
+  <b>4 · MEMORIA.</b> I dati restano sul telefono (localStorage dell'icona): nessun account,
+  nessuna cloud. Il bottone ⇄ Backup in tab Posizioni copia/incolla il portafoglio per
+  spostarlo su un altro dispositivo.<br><br>
+  <b>5 · DOPO UN AGGIORNAMENTO.</b> La PWA cache-a: riapri da Safari o reinstalla l'icona
+  per vedere la versione nuova.</p>
+</section>
+
+<script>
+"use strict";
+// ---------- util ----------
+var MESI=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+function num(s){ if(typeof s==="number")return s; if(s==null)return null;
+  s=String(s).trim(); if(s==="")return null;
+  if(s.indexOf(",")>=0){ s=s.replace(/\./g,"").replace(",","."); }
+  var v=parseFloat(s); return isNaN(v)?null:v; }
+function fmt(v,d){ if(v==null||isNaN(v))return "—";
+  return v.toLocaleString("it-IT",{minimumFractionDigits:d==null?0:d,maximumFractionDigits:d==null?2:d}); }
+function eur(v,d){ return fmt(v,d)+" €"; }
+function pct(v,d){ return (v==null||isNaN(v))?"—":(v*100).toFixed(d==null?2:d).replace(".",",")+"%"; }
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+// ---------- stato ----------
+var LS="trackerPos2026";
+function load(){ try{ return JSON.parse(localStorage.getItem(LS))||[]; }catch(e){ return []; } }
+function save(){ try{ localStorage.setItem(LS,JSON.stringify(P)); }catch(e){} }
+var P=load();
+var CAMBI_REF={EUR:1,USD:1.1165,GBP:0.83415,TRY:55.9957,MXN:20.8828};
+
+// ---------- calcoli puri ----------
+function calcPos(p){
+  var q=num(p.qta), pa=num(p.pAcq), pt=num(p.pAtt), cx=num(p.cambio)||1;
+  var bond=(p.tipo==="Bond");
+  var inv=(q==null||pa==null)?null:(bond?q*pa/100:q*pa)/cx;
+  var val=(q==null||pt==null)?null:(bond?q*pt/100:q*pt)/cx;
+  var pl=(inv==null||val==null)?null:val-inv;
+  var plp=(inv==null||inv===0||pl==null)?null:pl/inv;
+  var ced=num(p.cedPct), cAn=num(p.cedAnno)||1;
+  var reddLord=(q==null||ced==null)?null:(bond?q*ced/100:q*ced)/cx;      // annuo lordo in €
+  var ri=(reddLord==null||val==null||val===0)?null:reddLord/val;          // cedola÷prezzo
+  var al=num(p.aliq); if(al==null)al=0.26;
+  var cedNet=(reddLord==null)?null:reddLord/cAn*(1-al);
+  return {inv:inv,val:val,pl:pl,plp:plp,ri:ri,cedNet:cedNet,reddLord:reddLord};
+}
+
+// ---------- tab ----------
+function showTab(t,navId){
+  var ss=document.querySelectorAll("section"); for(var i=0;i<ss.length;i++)ss[i].classList.remove("act");
+  var nb=document.querySelectorAll("nav button"); for(var j=0;j<nb.length;j++)nb[j].classList.remove("act");
+  $(t).classList.add("act"); $(navId).classList.add("act");
+  if(t==="cal")renderCal();
+}
+
+// ---------- posizioni ----------
+function addPos(){
+  P.push({id:Date.now()+Math.random().toString(16).slice(2,6),nome:"Nuova posizione",tipo:"Bond",
+    isin:"",valuta:"EUR",cambio:"",qta:"",pAcq:"",pAtt:"",cedPct:"",cedAnno:"1",aliq:"0.26",dataCed:""});
+  save(); render();
+}
+function delPos(id){ if(!confirm("Eliminare questa posizione?"))return;
+  P=P.filter(function(p){return p.id!==id;}); save(); render(); }
+function setField(id,f,v){ for(var i=0;i<P.length;i++)if(P[i].id===id){P[i][f]=v;save();render();return;} }
+function setAliq(id,al){ setField(id,"aliq",al); }
+function setTipo(id,t){ setField(id,"tipo",t); }
+function setCcy(id,cc){
+  for(var i=0;i<P.length;i++)if(P[i].id===id){
+    P[i].valuta=cc; P[i].cambio=(cc==="EUR")?"":(CAMBI_REF[cc]!=null?CAMBI_REF[cc]:""); save(); render(); return; }
+}
+function CCY(id){ var p=null; for(var i=0;i<P.length;i++)if(P[i].id===id)p=P[i];
+  return p?["USD","GBP","TRY","MXN"].filter(function(c){return c!==p.valuta;}):[]; }
+
+function render(){
+  var s="",tInv=0,tVal=0,tRedd=0,nVal=0;
+  for(var i=0;i<P.length;i++){ var c=calcPos(P[i]);
+    if(c.inv!=null)tInv+=c.inv; if(c.val!=null){tVal+=c.val;nVal++;}
+    if(c.reddLord!=null)tRedd+=c.reddLord*(1-(num(P[i].aliq)==null?0.26:num(P[i].aliq))); }
+  var tPl=tVal-tInv;
+  if(P.length===0){ s='<div class="fempty">Nessuna posizione: premi ＋ Aggiungi posizione.</div>'; }
+  else{
+    var tRi=(tVal===0||tRedd===0&&tRedd!==0)?null:tRedd/tVal;
+    s+='<div class="row">'
+      +'<div class="card"><div class="k">Totale investito</div><div class="v">'+eur(tInv,0)+'</div></div>'
+      +'<div class="card"><div class="k">Valore attuale</div><div class="v">'+eur(tVal,0)+'</div></div>'
+      +'</div><div class="row">'
+      +'<div class="card '+(tPl>=0?"pos":"neg")+'"><div class="k">P&L totale</div><div class="v">'
+      +eur(tPl,0)+' · '+pct(tInv===0?null:tPl/tInv,1)+'</div></div>'
+      +'<div class="card"><div class="k">Reddito annuo netto</div><div class="v">'+eur(tRedd,0)+'</div>'
+      +'<div class="dim">rend. imm. medio '+pct(tRi)+'</div></div>'
+      +'</div>'
+      +'<div class="links"><button onclick="bkExport()">⇄ Backup: copia</button>'
+      +'<button onclick="bkImportClick()">⇄ Backup: incolla</button></div>'
+      +'<textarea id="bkArea" style="display:none;margin-top:8px" rows="4" placeholder="Incolla qui un backup e premi di nuovo Incolla"></textarea>';
+  }
+  $("summary").innerHTML=s;
+  var h="";
+  for(var k=0;k<P.length;k++)h+=posCard(P[k]);
+  $("plist").innerHTML=h;
+}
+function posCard(p){
+  var c=calcPos(p);
+  var linkGF=(p.valuta&&p.valuta!=="EUR")?' · <a href="https://www.google.com/finance/quote/EUR-'+p.valuta+'" target="_blank">cambio live ↗</a>':'';
+  var ccyBtns="";
+  var opts=["EUR"].concat(CCY(p.id));
+  for(var i=0;i<opts.length;i++){ var o=opts[i];
+    ccyBtns+='<button class="'+(p.valuta===o?"on":"")+'" onclick="setCcy(\''+p.id+'\',\''+o+'\')">'+(o==="EUR"?"💶 EUR":"💱 "+o)+'</button>'; }
+  return '<div class="pcard">'
+    +'<div class="head"><span class="nm">'+esc(p.nome||"—")+'</span>'
+    +'<span class="tp">'+esc(p.tipo)+'</span>'
+    +'<button onclick="delPos(\''+p.id+'\')">✕</button></div>'
+    +'<div class="outs">'
+    +'<div class="o"><div class="k">Investito</div><div class="v">'+eur(c.inv,0)+'</div></div>'
+    +'<div class="o"><div class="k">Valore</div><div class="v">'+eur(c.val,0)+'</div></div>'
+    +'<div class="o"><div class="k">P&L</div><div class="v '+(c.pl==null?"":(c.pl>=0?"pos":"neg"))+'">'
+      +((c.pl==null)?"—":eur(c.pl,0)+" "+pct(c.plp,1))+'</div></div>'
+    +'<div class="o"><div class="k">Rend. imm.</div><div class="v">'+pct(c.ri)+'</div></div>'
+    +'<div class="o"><div class="k">Cedola netta/pag.</div><div class="v">'+eur(c.cedNet)+'</div></div>'
+    +'</div>'
+    +'<div class="body">'
+    +'<label>Nome <input type="text" value="'+esc(p.nome)+'" onchange="setField(\''+p.id+'\',\'nome\',this.value)"></label>'
+    +'<div class="links">'
+    +'<button class="'+(p.tipo==="Bond"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'Bond\')">BOND</button>'
+    +'<button class="'+(p.tipo==="ETF"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'ETF\')">ETF</button>'
+    +'<button class="'+(p.tipo==="ETN"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'ETN\')">ETN</button>'
+    +'<button class="'+(p.tipo==="Cert"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'Cert\')">CERT</button>'
+    +'</div>'
+    +'<label>ISIN <input type="text" value="'+esc(p.isin)+'" onchange="setField(\''+p.id+'\',\'isin\',this.value)" style="text-transform:uppercase"></label>'
+    +'<div class="links">'+ccyBtns+'</div>'
+    +((p.valuta&&p.valuta!=="EUR")
+      ?'<label>Cambio (1 EUR = X '+esc(p.valuta)+')'+linkGF
+        +'<input inputmode="decimal" value="'+esc(p.cambio)+'" onchange="setField(\''+p.id+'\',\'cambio\',this.value)"></label>'
+      :'<input type="hidden" value="1">')
+    +'<div class="g2">'
+    +'<div><label>Quantità / Nominale<input inputmode="decimal" value="'+esc(p.qta)+'" onchange="setField(\''+p.id+'\',\'qta\',this.value)"></label></div>'
+    +'<div><label>Prezzo acquisto<input inputmode="decimal" value="'+esc(p.pAcq)+'" onchange="setField(\''+p.id+'\',\'pAcq\',this.value)"></label></div>'
+    +'<div><label>Prezzo attuale (Directa)<input inputmode="decimal" value="'+esc(p.pAtt)+'" onchange="setField(\''+p.id+'\',\'pAtt\',this.value)"></label></div>'
+    +'<div><label>'+(p.tipo==="Bond"?"Cedola annua %":"Dividendo annuo/quote")+'<input inputmode="decimal" value="'+esc(p.cedPct)+'" onchange="setField(\''+p.id+'\',\'cedPct\',this.value)"></label></div>'
+    +'<div><label>Cedole/anno<input inputmode="numeric" value="'+esc(p.cedAnno)+'" onchange="setField(\''+p.id+'\',\'cedAnno\',this.value)"></label></div>'
+    +'<div><label>Data prossima cedola<input type="date" value="'+esc(p.dataCed)+'" onchange="setField(\''+p.id+'\',\'dataCed\',this.value)"></label></div>'
+    +'</div>'
+    +'<div class="links">'
+    +'<button class="'+(String(p.aliq)==="0.125"?"on":"")+'" onclick="setAliq(\''+p.id+'\',\'0.125\')">TAX 12,5%</button>'
+    +'<button class="'+(String(p.aliq)==="0.26"?"on":"")+'" onclick="setAliq(\''+p.id+'\',\'0.26\')">TAX 26%</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
+// ---------- calendario cedole ----------
+function renderCal(){
+  var sums={},names={},tot=0;
+  for(var i=0;i<P.length;i++){ var p=P[i];
+    if(!p.dataCed||p.dataCed.length<7)continue;
+    var m=parseInt(p.dataCed.slice(5,7),10); if(!(m>=1&&m<=12))continue;
+    var c=calcPos(p); if(c.cedNet==null)continue;
+    sums[m]=(sums[m]||0)+c.cedNet; tot+=c.cedNet;
+    names[m]=(names[m]||[]).concat([(p.nome||"?")+(p.dataCed.length>=10?" · "+p.dataCed.slice(0,10):"")]);
+  }
+  var any=false; for(var k in sums)any=true;
+  var h;
+  if(!any){ h='<div class="fempty">Nessuna posizione con «Data prossima cedola» compilata.</div>'; }
+  else{
+    h='<table class="cal"><tr><th>Mese</th><th>Pagamenti</th><th style="text-align:right">Cedole nette</th></tr>';
+    for(var mm=1;mm<=12;mm++){
+      if(sums[mm]==null)continue;
+      h+='<tr><td>'+MESI[mm-1]+'</td><td class="nm">'+(names[mm].join("<br>"))+'</td>'
+        +'<td class="num">'+eur(sums[mm])+'</td></tr>'; }
+    h+='<tr class="tot"><td>TOTALE</td><td></td><td class="num">'+eur(tot)+'</td></tr></table>';
+  }
+  $("calOut").innerHTML=h;
+}
+
+// ---------- backup ----------
+function bkExport(){
+  var a=$("bkArea"); a.style.display="block"; a.value=JSON.stringify(P);
+  a.select(); try{document.execCommand("copy");a.blur();alert("Backup copiato: conserva il testo (Note, email…).");}catch(e){}
+}
+var bkArmed=false;
+function bkImportClick(){
+  var a=$("bkArea"); a.style.display="block";
+  if(!bkArmed){bkArmed=true;return;}
+  try{ var v=JSON.parse(a.value);
+    if(!Array.isArray(v))throw 0;
+    P=v; save(); render(); alert("Backup importato: "+v.length+" posizioni.");
+  }catch(e){ alert("Backup non valido: controlla il testo incollato."); }
+  bkArmed=false;
+}
+
+render();
+</script>
+</body>
+</html>
