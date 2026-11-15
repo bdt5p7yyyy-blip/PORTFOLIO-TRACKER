@@ -476,8 +476,84 @@ function prExport() {
   h += '<div class="avg"><div><b>Anno ' + anno + '</b>: ' + prNf(prAvg(rowsAnno, "max"), 0) + '/' + prNf(prAvg(rowsAnno, "min"), 0) + ' · ❤️ ' + prNf(prAvg(rowsAnno, "bpm"), 0) + ' · ⚖️ ' + prNf(prAvg(rowsAnno, "kg"), 1) + ' · BMI ' + prNf(prAvg(rowsAnno, "bmi"), 1) + '</div></div>';
   h += '<h3 style="margin:14px 0 6px;color:#000">Grafico</h3>' + prChart(rows);
   var pp = $("prPrint"); pp.innerHTML = h; pp.classList.add("show"); pp.style.display = "block";
-  try { window.print(); } catch (e) { /* anteprima sandbox: il riepilogo resta a schermo */ }
-  try { var a = document.createElement("a"); a.download = "pressione-riepilogo-" + anno + ".html"; a.href = "data:text/html;charset=utf-8," + encodeURIComponent('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Riepilogo pressione</title></head><body style="font-family:sans-serif;background:#fff;color:#000">' + h + '</body></html>'); document.body.appendChild(a); a.click(); document.body.removeChild(a); } catch (e) {}
+  try { prDownloadPdf(rows); } catch (e) {}
+  try { window.print(); } catch (e) { /* in PWA iOS la stampa e' bloccata: si usa il PDF via share sheet */ }
+}
+/* ---- PDF generato a mano (funziona anche in PWA iOS) ---- */
+function prPdfEsc(s) {
+  return String(s).replace(/[àèéìòù]/g, function(c){ return {"à":"a","è":"e","é":"e","ì":"i","ò":"o","ù":"u"}[c]; })
+    .replace(/[^\x20-\x7E]/g, "?").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+function prMakePdf(lines, series) {
+  var PW = 595, PH = 842, M = 40;
+  var pages = [[]];
+  lines.forEach(function(L){ if (pages[pages.length - 1].length >= 44) pages.push([]); pages[pages.length - 1].push(L); });
+  var objs = [];
+  function add(s){ objs.push(s); return objs.length; }
+  add("<< /Type /Catalog /Pages 2 0 R >>");
+  add("PAGES");
+  add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  var kids = [];
+  pages.forEach(function(pg, pi) {
+    var y = PH - M, cs = "";
+    pg.forEach(function(L) {
+      var sz = L.size || 11;
+      cs += "/F" + (L.bold ? 2 : 1) + " " + sz + " Tf 1 0 0 1 " + M + " " + y + " Tm (" + prPdfEsc(L.t) + ") Tj ";
+      y -= sz + 5;
+    });
+    if (pi === 0 && series && series.length) {
+      var x0 = M, y0 = 70, w = PW - 2 * M, hh = 150;
+      series.forEach(function(se) {
+        cs += "q " + se.color + " 2 w ";
+        se.pts.forEach(function(p, i){ cs += (x0 + p[0] * w).toFixed(1) + " " + (y0 + p[1] * hh).toFixed(1) + (i ? " l " : " m "); });
+        cs += "S Q ";
+      });
+    }
+    var cN = add("<< /Length " + cs.length + " >>\nstream\n" + cs + "\nendstream");
+    var pN = add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents " + cN + " 0 R >>");
+    kids.push(pN + " 0 R");
+  });
+  objs[1] = "<< /Type /Pages /Kids [" + kids.join(" ") + "] /Count " + pages.length + " >>";
+  var out = "%PDF-1.4\n", offs = [];
+  objs.forEach(function(o, i){ offs.push(out.length); out += (i + 1) + " 0 obj\n" + o + "\nendobj\n"; });
+  var xref = out.length;
+  out += "xref\n0 " + (objs.length + 1) + "\n0000000000 65535 f \n";
+  offs.forEach(function(o){ out += ("0000000000" + o).slice(-10) + " 00000 n \n"; });
+  out += "trailer\n<< /Size " + (objs.length + 1) + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF";
+  return out;
+}
+function prDownloadPdf(rows) {
+  var anno = new Date().getFullYear();
+  var lines = [{ t: "Tracker Pressione - riepilogo", size: 16, bold: 1 },
+               { t: "Generato il " + new Date().toLocaleDateString("it-IT"), size: 10 }, { t: " ", size: 6 },
+               { t: "Data      MAX  MIN  bpm  kg    BMI", size: 11, bold: 1 }];
+  rows.forEach(function(r) {
+    var p = r.d.split("-");
+    lines.push({ t: p[2] + "/" + p[1] + "/" + p[0].slice(2) + "   " + prNf(r.max, 0) + "   " + prNf(r.min, 0) + "   " + prNf(r.bpm, 0) + "   " + prNf(r.kg, 1) + "   " + prNf(r.bmi, 1), size: 11 });
+  });
+  var ra = rows.filter(function(r){ return r.d.slice(0, 4) == anno; });
+  lines.push({ t: " ", size: 6 });
+  lines.push({ t: "Anno " + anno + ": MAX " + prNf(prAvg(ra, "max"), 0) + "  MIN " + prNf(prAvg(ra, "min"), 0) + "  bpm " + prNf(prAvg(ra, "bpm"), 0) + "  kg " + prNf(prAvg(ra, "kg"), 1) + "  BMI " + prNf(prAvg(ra, "bmi"), 1), size: 12, bold: 1 });
+  var all = []; rows.forEach(function(r){ all.push(r.max, r.min); });
+  var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all), rg = (hi - lo) || 1;
+  var n = rows.length - 1 || 1;
+  var series = [
+    { color: "0.95 0.2 0.2 RG", pts: rows.map(function(r, i){ return [i / n, (r.max - lo) / rg]; }) },
+    { color: "0.2 0.4 0.95 RG", pts: rows.map(function(r, i){ return [i / n, (r.min - lo) / rg]; }) }
+  ];
+  var pdf = prMakePdf(lines, series);
+  var blob = new Blob([pdf], { type: "application/pdf" });
+  var fname = "pressione-riepilogo-" + anno + ".pdf";
+  var file = new File([blob], fname, { type: "application/pdf" });
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: "Riepilogo pressione " + anno }).catch(function(){});
+  } else {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = fname;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", prRender); else prRender();
 </script>
@@ -517,6 +593,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
 
 </body>
 </html>
+
 
 
 
