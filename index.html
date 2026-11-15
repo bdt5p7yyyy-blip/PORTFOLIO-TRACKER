@@ -496,12 +496,13 @@ function prMakePdf(lines, series) {
   add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
   var kids = [];
   pages.forEach(function(pg, pi) {
-    var y = PH - M, cs = "";
+    var y = PH - M, cs = "BT ";
     pg.forEach(function(L) {
       var sz = L.size || 11;
       cs += "/F" + (L.bold ? 2 : 1) + " " + sz + " Tf 1 0 0 1 " + M + " " + y + " Tm (" + prPdfEsc(L.t) + ") Tj ";
       y -= sz + 5;
     });
+    cs += "ET ";
     if (pi === 0 && series && series.length) {
       var x0 = M, y0 = 70, w = PW - 2 * M, hh = 150;
       series.forEach(function(se) {
@@ -593,6 +594,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
 
 </body>
 </html>
+
 
 
 
