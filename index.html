@@ -12,7 +12,7 @@
 <title>TRACKER — Portafoglio</title>
 <style>
 :root{
-  --bg:#0b1220; --sur:#141d2e; --sur2:#1b2740; --txt:#e2e8f0; --mut:#94a3b8;
+  --bg:#0b1220; --sur:#141d2e; --sur2:#1b2740; --txt:#f8fafc; --mut:#cbd5e1;
   --acc:#60a5fa; --pos:#4ade80; --neg:#f87171; --amb:#fbbf24; --bor:#243250;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -23,6 +23,13 @@ h1{font-size:20px; font-weight:800; letter-spacing:.5px; text-transform:uppercas
 .sub{color:var(--mut); font-size:13px; margin:0 16px 12px}
 nav{display:flex; flex-wrap:wrap; gap:4px; padding:6px 8px; position:sticky; top:0;
   background:rgba(11,18,32,.96); z-index:10; border-bottom:1px solid var(--bor)}
+h2.sect{font-size:16px;margin:16px 16px 6px}
+#lockBtn{float:right;background:none;border:1px solid var(--bor);border-radius:8px;color:var(--mut);font-size:16px;padding:4px 10px}
+body.locked #app{display:none}
+#lock{display:none;position:fixed;inset:0;background:var(--bg);z-index:99;align-items:center;justify-content:center;padding:20px}
+body.locked #lock{display:flex}
+.lockbox{width:100%;max-width:340px;background:var(--sur);border:1px solid var(--bor);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.lockbox input{font-size:20px;text-align:center;letter-spacing:4px}
 nav button{flex:1 1 30%; background:none; border:none; border-bottom:3px solid transparent;
   color:var(--txt); opacity:.9; font-weight:700; font-size:12px; letter-spacing:.5px;
   text-transform:uppercase; padding:10px 4px; cursor:pointer;
@@ -78,9 +85,8 @@ table.cal tr.tot td{border-top:2px solid var(--acc); font-weight:800}
 .note b{color:var(--txt)}
 .fempty{color:var(--mut); text-align:center; padding:26px 16px; font-size:14px}
 nav button:nth-child(1){--c:#60a5fa}
-nav button:nth-child(2){--c:#e879f9}
-nav button:nth-child(3){--c:#f472b6}
-nav button:nth-child(4){--c:#facc15}
+nav button:nth-child(2){--c:#f472b6}
+nav button:nth-child(3){--c:#facc15}
 @media(max-width:479px){nav button{flex:1 1 30%}}
 #printBtn{background:rgba(250,204,21,.18);color:#facc15}
 #prPrint{display:none}
@@ -106,27 +112,23 @@ nav button:nth-child(4){--c:#facc15}
 </style>
 </head>
 <body>
-<h1>📊 Tracker Portafoglio</h1>
-<p class="sub">Bond · ETF · ETN · Certificati — P&L, rendimenti e cedole nette</p>
+<div id="app">
+<h1>📊 Tracker Portafoglio <button id="lockBtn" onclick="ptLockNow()" title="Blocca i dati">🔒</button></h1>
+<p class="sub">Bond · ETF · ETN — P&L, rendimenti e cedole nette</p>
 
 <nav>
 <button id="navPos" class="act" onclick="showTab('pos','navPos')">Posizioni</button>
-<button id="navCal" onclick="showTab('cal','navCal')">Cedole</button>
 <button id="navIst" onclick="showTab('ist','navIst')">Istruzioni</button>
 <button id="navPr" onclick="showTab('press','navPr')">Pressione</button>
 </nav>
 
 <section id="pos" class="act">
-  <div id="summary"></div>
+  <h2 class="sect">📅 Cedole per mese</h2>
+  <div id="calOut"></div>
   <button class="bigbtn" onclick="addPos()">＋ Aggiungi posizione</button>
   <div id="plist"></div>
-</section>
-
-<section id="cal">
-  <div id="calOut"></div>
-  <p class="note">Il calendario raggruppa per <b>mese</b> le cedole nette delle posizioni con la
-  «Data prossima cedola» compilata: tieni nel vivaio solo le date dei prossimi 12 mesi e
-  aggiornale man mano che incassi. Il conteggio è indipendente dall'anno.</p>
+  <div class="links" style="margin:10px 4px"><button onclick="bkExport()">⇄ Backup: copia</button><button onclick="bkImportClick()">⇄ Backup: incolla</button></div>
+  <textarea id="bkArea" style="display:none;margin:8px 4px" rows="4" placeholder="Incolla qui un backup e premi di nuovo Incolla"></textarea>
 </section>
 
 <section id="ist">
@@ -137,7 +139,7 @@ nav button:nth-child(4){--c:#facc15}
   entrate per mensilità.<br><br>
   <b>2 · COMPILAZIONE.</b> Per i <b>Bond</b> la Quantità è il nominale e i prezzi in % del
   nominale; la Cedola è la % annua (BTP semestrale = cedola del listino × 2). Per
-  <b>ETF/ETN/Certificati</b> la Quantità è il numero di quote, il prezzo è per quota e la
+  <b>ETF/ETN</b> la Quantità è il numero di quote, il prezzo è per quota e la
   Cedola è il dividendo annuo per quota in valuta. Per l'oro/titoli in valuta: cambio 1 EUR =
   X valuta (stile BCE: si divide) — batti 💱 per riempire il cambio di riferimento e apri il
   link per il live di Google Finance.<br><br>
@@ -172,7 +174,7 @@ var LS="trackerPos2026";
 function load(){ try{ return JSON.parse(localStorage.getItem(LS))||[]; }catch(e){ return []; } }
 function save(){ try{ localStorage.setItem(LS,JSON.stringify(P)); }catch(e){} }
 var P=load();
-var CAMBI_REF={EUR:1,USD:1.1165,GBP:0.83415,TRY:55.9957,MXN:20.8828};
+var CAMBI_REF={EUR:1,USD:1.1165,TRY:55.9957,MXN:20.8828,ZAR:20.10,BRL:6.42};
 
 // ---------- calcoli puri ----------
 function calcPos(p){
@@ -195,14 +197,13 @@ function showTab(t,navId){
   var ss=document.querySelectorAll("section"); for(var i=0;i<ss.length;i++)ss[i].classList.remove("act");
   var nb=document.querySelectorAll("nav button"); for(var j=0;j<nb.length;j++)nb[j].classList.remove("act");
   $(t).classList.add("act"); $(navId).classList.add("act");
-  if(t==="cal")renderCal();
   if(t==="press")prRender();
 }
 
 // ---------- posizioni ----------
 function addPos(){
   P.push({id:Date.now()+Math.random().toString(16).slice(2,6),nome:"Nuova posizione",tipo:"Bond",
-    isin:"",valuta:"EUR",cambio:"",qta:"",pAcq:"",pAtt:"",cedPct:"",cedAnno:"1",aliq:"0.26",dataCed:""});
+    isin:"",valuta:"EUR",cambio:"",qta:"",pAcq:"",pAtt:"",cedPct:"",cedAnno:"1",aliq:"0.26",dataCed:"",scad:""});
   save(); render();
 }
 function delPos(id){ if(!confirm("Eliminare questa posizione?"))return;
@@ -215,34 +216,13 @@ function setCcy(id,cc){
     P[i].valuta=cc; P[i].cambio=(cc==="EUR")?"":(CAMBI_REF[cc]!=null?CAMBI_REF[cc]:""); save(); render(); return; }
 }
 function CCY(id){ var p=null; for(var i=0;i<P.length;i++)if(P[i].id===id)p=P[i];
-  return p?["USD","GBP","TRY","MXN"].filter(function(c){return c!==p.valuta;}):[]; }
+  return p?["USD","TRY","MXN","ZAR","BRL"].filter(function(c){return c!==p.valuta;}):[]; }
 
 function render(){
-  var s="",tInv=0,tVal=0,tRedd=0,nVal=0;
-  for(var i=0;i<P.length;i++){ var c=calcPos(P[i]);
-    if(c.inv!=null)tInv+=c.inv; if(c.val!=null){tVal+=c.val;nVal++;}
-    if(c.reddLord!=null)tRedd+=c.reddLord*(1-(num(P[i].aliq)==null?0.26:num(P[i].aliq))); }
-  var tPl=tVal-tInv;
-  if(P.length===0){ s='<div class="fempty">Nessuna posizione: premi ＋ Aggiungi posizione.</div>'; }
-  else{
-    var tRi=(tVal===0||tRedd===0&&tRedd!==0)?null:tRedd/tVal;
-    s+='<div class="row">'
-      +'<div class="card"><div class="k">Totale investito</div><div class="v">'+eur(tInv,0)+'</div></div>'
-      +'<div class="card"><div class="k">Valore attuale</div><div class="v">'+eur(tVal,0)+'</div></div>'
-      +'</div><div class="row">'
-      +'<div class="card '+(tPl>=0?"pos":"neg")+'"><div class="k">P&L totale</div><div class="v">'
-      +eur(tPl,0)+' · '+pct(tInv===0?null:tPl/tInv,1)+'</div></div>'
-      +'<div class="card"><div class="k">Reddito annuo netto</div><div class="v">'+eur(tRedd,0)+'</div>'
-      +'<div class="dim">rend. imm. medio '+pct(tRi)+'</div></div>'
-      +'</div>'
-      +'<div class="links"><button onclick="bkExport()">⇄ Backup: copia</button>'
-      +'<button onclick="bkImportClick()">⇄ Backup: incolla</button></div>'
-      +'<textarea id="bkArea" style="display:none;margin-top:8px" rows="4" placeholder="Incolla qui un backup e premi di nuovo Incolla"></textarea>';
-  }
-  $("summary").innerHTML=s;
   var h="";
   for(var k=0;k<P.length;k++)h+=posCard(P[k]);
-  $("plist").innerHTML=h;
+  $("plist").innerHTML=h || '<div class="fempty">Nessuna posizione: premi ＋ Aggiungi posizione.</div>';
+  renderCal();
 }
 function posCard(p){
   var c=calcPos(p);
@@ -269,7 +249,6 @@ function posCard(p){
     +'<button class="'+(p.tipo==="Bond"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'Bond\')">BOND</button>'
     +'<button class="'+(p.tipo==="ETF"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'ETF\')">ETF</button>'
     +'<button class="'+(p.tipo==="ETN"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'ETN\')">ETN</button>'
-    +'<button class="'+(p.tipo==="Cert"?"on":"")+'" onclick="setTipo(\''+p.id+'\',\'Cert\')">CERT</button>'
     +'</div>'
     +'<label>ISIN <input type="text" value="'+esc(p.isin)+'" onchange="setField(\''+p.id+'\',\'isin\',this.value)" style="text-transform:uppercase"></label>'
     +'<div class="links">'+ccyBtns+'</div>'
@@ -284,6 +263,7 @@ function posCard(p){
     +'<div><label>'+(p.tipo==="Bond"?"Cedola annua %":"Dividendo annuo/quote")+'<input inputmode="decimal" value="'+esc(p.cedPct)+'" onchange="setField(\''+p.id+'\',\'cedPct\',this.value)"></label></div>'
     +'<div><label>Cedole/anno<input inputmode="numeric" value="'+esc(p.cedAnno)+'" onchange="setField(\''+p.id+'\',\'cedAnno\',this.value)"></label></div>'
     +'<div><label>Data prossima cedola<input type="date" value="'+esc(p.dataCed)+'" onchange="setField(\''+p.id+'\',\'dataCed\',this.value)"></label></div>'
+    +'<div><label>Scadenza titolo<input type="date" value="'+esc(p.scad||"")+'" onchange="setField(\''+p.id+'\',\'scad\',this.value)"></label></div>'
     +'</div>'
     +'<div class="links">'
     +'<button class="'+(String(p.aliq)==="0.125"?"on":"")+'" onclick="setAliq(\''+p.id+'\',\'0.125\')">TAX 12,5%</button>'
@@ -332,7 +312,31 @@ function bkImportClick(){
   bkArmed=false;
 }
 
+
+/* ---------- blocco dati con codice ---------- */
+function ptHash(s){var x=5381;for(var i=0;i<s.length;i++)x=((x*33)^s.charCodeAt(i))>>>0;return "h"+x;}
+function ptSS(k,v){try{if(v===undefined)return sessionStorage.getItem(k);sessionStorage.setItem(k,v);}catch(e){return null;}}
+function ptLockInit(){
+  if(prLSGet("ptPin") && ptSS("ptU")!=="1"){ document.body.classList.add("locked"); $("pinIn").value=""; }
+}
+function ptUnlock(){
+  var pin=prLSGet("ptPin");
+  if(!pin){ $("lockMsg").textContent="Prima apertura: crea il tuo codice (min 4 cifre)."; $("pinSetup").style.display="flex"; $("pinIn").style.display="none"; $("unlockBtn").style.display="none"; return; }
+  if(ptHash($("pinIn").value)===pin){ ptSS("ptU","1"); document.body.classList.remove("locked"); }
+  else { $("lockMsg").textContent="Codice errato. Riprova."; $("pinIn").value=""; }
+}
+function ptSetup(){
+  var a=$("pinNew").value,b=$("pinNew2").value;
+  if(a.length<4||a!==b){ $("lockMsg").textContent="Codice non valido o non coincide (min 4 cifre)."; return; }
+  prLSSet("ptPin",ptHash(a)); ptSS("ptU","1"); document.body.classList.remove("locked");
+}
+function ptLockNow(){
+  ptSS("ptU",""); document.body.classList.add("locked");
+  $("pinSetup").style.display="none"; $("pinIn").style.display=""; $("unlockBtn").style.display="";
+  $("lockMsg").textContent="Inserisci il codice per vedere i dati."; $("pinIn").value="";
+}
 render();
+ptLockInit();
 /* ---------- Tab Pressione & salute ---------- */
 var PR_KEY = "ptPressV1", PR_H = "ptAltezzaV1", prEditing = -1;
 function prNf(v, d) {
@@ -546,15 +550,24 @@ function prDownloadPdf(rows) {
   var pdf = prMakePdf(lines, series);
   var blob = new Blob([pdf], { type: "application/pdf" });
   var fname = "pressione-riepilogo-" + anno + ".pdf";
-  var file = new File([blob], fname, { type: "application/pdf" });
-  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: "Riepilogo pressione " + anno }).catch(function(){});
+  var url = URL.createObjectURL(blob);
+  var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone;
+  var w = null;
+  if (standalone) {
+    // In PWA iOS la share di File puo' salvare un file vuoto: si apre il PDF in una scheda Safari
+    w = window.open(url, "_blank");
+  } else if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fname, { type: "application/pdf" })] })) {
+    navigator.share({ files: [new File([blob], fname, { type: "application/pdf" })], title: "Riepilogo pressione " + anno }).catch(function(){});
   } else {
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = fname;
-    document.body.appendChild(a); a.click();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    w = window.open(url, "_blank");
   }
+  if (!w && !(navigator.share && !standalone)) {
+    var a = document.createElement("a");
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ a.remove(); }, 4000);
+  }
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", prRender); else prRender();
 </script>
@@ -592,8 +605,23 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
   <div id="prPrint"></div>
 </section>
 
+</div>
+<div id="lock">
+  <div class="lockbox">
+    <h2 style="margin:0;font-size:18px">🔒 Tracker bloccato</h2>
+    <p id="lockMsg" style="color:var(--mut);font-size:14px;margin:0">Inserisci il codice per vedere i dati.</p>
+    <input id="pinIn" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button class="bigbtn" id="unlockBtn" onclick="ptUnlock()">Sblocca</button>
+    <div id="pinSetup" style="display:none;flex-direction:column;gap:10px">
+      <input id="pinNew" type="password" inputmode="numeric" autocomplete="off" placeholder="Nuovo codice (min 4 cifre)">
+      <input id="pinNew2" type="password" inputmode="numeric" autocomplete="off" placeholder="Ripeti il codice">
+      <button class="bigbtn" onclick="ptSetup()">Imposta codice</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
+
 
 
 
