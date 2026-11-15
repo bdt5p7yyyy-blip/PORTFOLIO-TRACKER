@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="it">
 <head>
@@ -79,7 +80,29 @@ table.cal tr.tot td{border-top:2px solid var(--acc); font-weight:800}
 nav button:nth-child(1){--c:#60a5fa}
 nav button:nth-child(2){--c:#e879f9}
 nav button:nth-child(3){--c:#f472b6}
+nav button:nth-child(4){--c:#facc15}
 @media(max-width:479px){nav button{flex:1 1 30%}}
+#printBtn{background:rgba(250,204,21,.18);color:#facc15}
+#prPrint{display:none}
+#prPrint.show{display:block;background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:14px;margin:12px 4px;color:var(--txt);max-width:100%;box-sizing:border-box;overflow-x:auto}
+#prPrint svg{max-width:100%;height:auto;display:block}
+#prPrint.show table{border-collapse:collapse;width:100%;font-size:16px;margin-top:6px}
+#prPrint.show th,#prPrint.show td{border:1px solid var(--bor);padding:8px 10px;text-align:left}
+#prPrint.show .avg{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+#prPrint.show .avg div{border:1px solid var(--bor);border-radius:8px;padding:6px 10px;font-size:12px}
+@media print{
+  body *{visibility:hidden}
+  #prPrint,#prPrint *{visibility:visible}
+  #prPrint{display:block;position:absolute;top:0;left:0;width:100%;background:#fff;color:#000;padding:10px}
+  #prPrint h2,#prPrint h3{color:#000}
+  #prPrint table{border-collapse:collapse;width:100%;font-size:15px}
+  #prPrint th,#prPrint td{border:1px solid #000;padding:8px 10px;text-align:left;color:#000}
+  #prPrint th{background:#eee;font-size:15px}
+  #prPrint .avg{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  #prPrint .avg div{border:1px solid #000;border-radius:8px;padding:6px 10px;font-size:12px;color:#000}
+  #prPrint svg{background:#fff !important;border:1px solid #000 !important;max-width:100%;height:auto}
+  @media(max-width:479px){ #prPrint table{font-size:13px} #prPrint th,#prPrint td{padding:6px 7px} }
+}
 </style>
 </head>
 <body>
@@ -90,6 +113,7 @@ nav button:nth-child(3){--c:#f472b6}
 <button id="navPos" class="act" onclick="showTab('pos','navPos')">Posizioni</button>
 <button id="navCal" onclick="showTab('cal','navCal')">Cedole</button>
 <button id="navIst" onclick="showTab('ist','navIst')">Istruzioni</button>
+<button id="navPr" onclick="showTab('press','navPr')">Pressione</button>
 </nav>
 
 <section id="pos" class="act">
@@ -172,6 +196,7 @@ function showTab(t,navId){
   var nb=document.querySelectorAll("nav button"); for(var j=0;j<nb.length;j++)nb[j].classList.remove("act");
   $(t).classList.add("act"); $(navId).classList.add("act");
   if(t==="cal")renderCal();
+  if(t==="press")prRender();
 }
 
 // ---------- posizioni ----------
@@ -308,6 +333,197 @@ function bkImportClick(){
 }
 
 render();
+/* ---------- Tab Pressione & salute ---------- */
+var PR_KEY = "ptPressV1", PR_H = "ptAltezzaV1", prEditing = -1;
+function prNf(v, d) {
+  if (v == null || isNaN(v)) return "—";
+  return Number(v).toLocaleString("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+var PR_MEM = {};
+function prLSGet(k) { try { return localStorage.getItem(k); } catch (e) { return (k in PR_MEM) ? PR_MEM[k] : null; } }
+function prLSSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { PR_MEM[k] = v; } }
+function prGet() { try { var v = JSON.parse(prLSGet(PR_KEY) || "[]"); if (!Array.isArray(v)) return []; var f = v.filter(function(r){ return r && r.d && r.max != null && r.min != null; }); if (f.length !== v.length) prLSSet(PR_KEY, JSON.stringify(f)); return f; } catch (e) { return []; } }
+function prSet(a) { prLSSet(PR_KEY, JSON.stringify(a)); }
+function prBmiCol(b) {
+  if (b == null || isNaN(b)) return "";
+  if (b >= 30) return "#f87171";        // obeso — rosso
+  if (b >= 25) return "#facc15";        // sovrappeso — giallo
+  if (b >= 18.5) return "#4ade80";      // normopeso — verde
+  return "";
+}
+function prBmiCalc() {
+  var kg = num($("prKg").value), h = num($("prAltezza").value);
+  var b = (kg > 0 && h > 0) ? kg / Math.pow(h / 100, 2) : NaN;
+  var br = isNaN(b) ? null : +b.toFixed(1);
+  $("prBmi").value = br == null ? "" : br.toFixed(1);
+  $("prBmi").style.color = prBmiCol(br);
+  return b;
+}
+function prSave() {
+  var d = $("prData").value, mn = num($("prMin").value), mx = num($("prMax").value), kg = num($("prKg").value), bpm = num($("prBpm").value);
+  if (!d || mn == null || mx == null)
+    return void ($("prOut").innerHTML = '<div class="card"><span class="k" style="color:var(--neg)">Compila almeno data, minima e massima.</span></div>');
+  var h = num($("prAltezza").value); if (h > 0) prLSSet(PR_H, String(h));
+  var bmi = prBmiCalc();
+  var row = { d: d, min: mn, minN: $("prMinN").value || "Min", max: mx, maxN: $("prMaxN").value || "Max",
+              kg: isNaN(kg) ? null : kg, bmi: isNaN(bmi) ? null : +bmi.toFixed(1), bpm: isNaN(bpm) ? null : bpm };
+  var a = prGet();
+  if (prEditing >= 0 && a[prEditing]) a[prEditing] = row; else a.push(row);
+  prSet(a); prAnnulla(); prRender();
+}
+function prAnnulla() {
+  prEditing = -1;
+  ["prData","prMin","prMinN","prMax","prMaxN","prKg","prBmi","prBpm"].forEach(function(id){ $(id).value = (id==="prMinN")?"Diastolica":(id==="prMaxN")?"Sistolica":""; });
+  $("prEditBtn").style.display = "none"; $("prAnnullaBtn").style.display = "none";
+}
+function prEdit(i) {
+  var r = prGet()[i]; if (!r) return;
+  prEditing = i;
+  $("prData").value = r.d; $("prMin").value = r.min; $("prMinN").value = r.minN;
+  $("prMax").value = r.max; $("prMaxN").value = r.maxN;
+  $("prKg").value = r.kg == null ? "" : r.kg; $("prBpm").value = r.bpm == null ? "" : r.bpm;
+  prBmiCalc();
+  $("prEditBtn").style.display = ""; $("prAnnullaBtn").style.display = "";
+}
+function prDel(i) { var a = prGet(); a.splice(i, 1); prSet(a); if (prEditing === i) prAnnulla(); prRender(); }
+function prAvg(rows, f) {
+  var v = rows.map(function(r){ return r[f]; }).filter(function(x){ return x != null && !isNaN(x); });
+  return v.length ? v.reduce(function(a, b){ return a + b; }, 0) / v.length : null;
+}
+function prCardMedia(titolo, rows) {
+  if (!rows.length) return '<div class="card" style="flex:0 0 auto;min-width:150px"><span class="k" style="font-weight:700">' + titolo + '</span><span class="v" style="font-size:15px">Nessun dato</span></div>';
+  var mx = prAvg(rows, "max"), mn = prAvg(rows, "min"), bpm = prAvg(rows, "bpm"), kg = prAvg(rows, "kg"), bmi = prAvg(rows, "bmi");
+  var maxN = rows[rows.length-1].maxN, minN = rows[rows.length-1].minN;
+  return '<div class="card" style="flex:0 0 auto;min-width:180px">' +
+    '<span class="k" style="font-weight:700;color:var(--neg)">' + titolo + '</span>' +
+    '<span class="v" style="font-size:18px">' + (mx!=null?prNf(mx,0):"—") + " / " + (mn!=null?prNf(mn,0):"—") + '</span>' +
+    '<span class="dim">' + maxN + " / " + minN + (bpm!=null ? " · ❤️ " + prNf(bpm,0) : "") + (kg!=null ? " · ⚖️ " + prNf(kg,1) + " kg" : "") + (bmi!=null ? ' · BMI <b style="color:' + (prBmiCol(bmi) || 'inherit') + '">' + prNf(bmi,1) + '</b>' : "") + '</span></div>';
+}
+function prChart(rows) {
+  var plottable = rows.filter(function(r){ return r.max != null || r.min != null || r.bpm != null; });
+  if (!plottable.length) return rows.length ? '<div class="note">Aggiungi almeno 2 misurazioni per il grafico.</div>' : "";
+  rows = plottable;
+  var W = Math.max(340, rows.length * 30), H = 250, L = 42, R = 16, T = 18, B = 34;
+  var all = [];
+  rows.forEach(function(r){ all.push(r.max, r.min); if (r.bpm != null) all.push(r.bpm); });
+  var yMax = Math.max.apply(null, all) * 1.12, yMin = Math.min.apply(null, all) * 0.88;
+  if (yMin > 0 && yMax - yMin < 20) yMin = Math.max(0, yMin - 10);
+  var px = function(i){ return L + (rows.length === 1 ? 0 : i / (rows.length - 1) * (W - L - R)); };
+  var py = function(v){ return T + (1 - (v - yMin) / (yMax - yMin)) * (H - T - B); };
+  var line = function(f, col, dash) {
+    var pts = rows.map(function(r, i){ return r[f] == null ? null : px(i).toFixed(1) + "," + py(r[f]).toFixed(1); }).filter(Boolean);
+    if (!pts.length) return "";
+    return '<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + col + '" stroke-width="2.5"' + (dash ? ' stroke-dasharray="5 4"' : "") + ' />' +
+      rows.map(function(r, i){ return r[f] == null ? "" : '<circle cx="' + px(i).toFixed(1) + '" cy="' + py(r[f]).toFixed(1) + '" r="3.5" fill="' + col + '"/>'; }).join("");
+  };
+  var g = "";
+  for (var i = 0; i <= 4; i++) {
+    var y = yMin + (yMax - yMin) * i / 4;
+    g += '<line x1="' + L + '" y1="' + py(y).toFixed(1) + '" x2="' + (W - R) + '" y2="' + py(y).toFixed(1) + '" stroke="var(--bor)" stroke-width="1"/>' +
+         '<text x="' + (L - 6) + '" y="' + (py(y) + 4).toFixed(1) + '" font-size="11" fill="var(--mut)" text-anchor="end">' + Math.round(y) + '</text>';
+  }
+  var lbl = [0, Math.floor(rows.length / 2), rows.length - 1], seen = {};
+  lbl.forEach(function(i) {
+    if (seen[i]) return; seen[i] = 1;
+    g += '<text x="' + px(i).toFixed(1) + '" y="' + (H - 10) + '" font-size="11" fill="var(--mut)" text-anchor="middle">' + rows[i].d.slice(5).split("-").reverse().join("/") + '</text>';
+  });
+  g += line("max", "#f87171", false) + line("min", "#60a5fa", false) + line("bpm", "#4ade80", true);
+  var last = rows[rows.length - 1];
+  return '<div style="font-size:12px;margin:0 0 4px 4px">' +
+    '<span style="color:#f87171;font-weight:700">— ' + last.maxN + '</span> · ' +
+    '<span style="color:#60a5fa;font-weight:700">— ' + last.minN + '</span> · ' +
+    '<span style="color:#4ade80;font-weight:700">- - ❤️ bpm</span></div>' +
+    '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" style="background:var(--sur);border:1px solid var(--bor);border-radius:12px">' + g + '</svg>';
+}
+function prRender() {
+  var all = prGet();
+  var h = prLSGet(PR_H); if (h) $("prAltezza").value = h;
+  var sorted = all.map(function(r, i){ return { r: r, i: i }; }).sort(function(a, b){ return a.r.d < b.r.d ? -1 : 1; });
+  var rows = sorted.map(function(s){ return s.r; });
+  var out = "";
+  if (!rows.length) out += '<div class="fempty">Nessuna misurazione salvata.</div>';
+  else {
+    out += '<h2 style="font-size:16px;margin:14px 4px 6px">Misurazioni salvate</h2>';
+    sorted.slice().reverse().forEach(function(s) {
+      var r = s.r;
+      out += '<div class="card" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px">' +
+        '<span class="k" style="font-weight:700">' + r.d.split("-").reverse().join("/") + '</span>' +
+        '<span class="v" style="font-size:15px;flex:1 1 auto;text-align:left"><b style="color:var(--neg)">' + prNf(r.max,0) + '</b> ' + r.maxN + ' · <b style="color:#60a5fa">' + prNf(r.min,0) + '</b> ' + r.minN +
+        (r.bpm != null ? ' · ❤️ ' + prNf(r.bpm,0) : '') + (r.kg != null ? ' · ⚖️ ' + prNf(r.kg,1) + ' kg' : '') + (r.bmi != null ? ' · BMI <b style="color:' + (prBmiCol(r.bmi) || 'inherit') + '">' + prNf(r.bmi,1) + '</b>' : '') + '</span>' +
+        '<span class="row" style="flex:0 0 auto">' +
+        '<button class="btn" style="width:auto;margin:0;padding:8px 10px;font-size:12px;background:rgba(96,165,250,.25);color:#60a5fa" onclick="prEdit(' + s.i + ')">✏️ Modifica</button>' +
+        '<button class="btn" style="width:auto;margin:0;padding:8px 10px;font-size:12px;background:rgba(248,113,113,.25);color:var(--neg)" onclick="prDel(' + s.i + ')">🗑</button>' +
+        '</span></div>';
+    });
+  }
+  $("prOut").innerHTML = out;
+  var anno = new Date().getFullYear();
+  $("prAnno").innerHTML = prCardMedia("📅 Anno calendariale " + anno, rows.filter(function(r){ return r.d.slice(0, 4) == anno; }));
+}
+function prExport() {
+  var rows = prGet().map(function(r, i){ return { r: r, i: i }; }).sort(function(a, b){ return a.r.d < b.r.d ? -1 : 1; }).map(function(s){ return s.r; });
+  if (!rows.length) { var pp0 = $("prPrint"); pp0.innerHTML = '<div class="card"><span class="k" style="color:var(--neg);font-weight:700">Nessuna misurazione salvata: salva prima una data.</span></div>'; pp0.classList.add("show"); pp0.style.display = "block"; return; }
+  var last = rows[rows.length - 1];
+  var h = '<h2>Tracker Pressione — riepilogo</h2><p style="font-size:12px;color:#000">Generato il ' + new Date().toLocaleDateString("it-IT") + '</p>';
+  h += '<table><tr><th>Data</th><th>MAX</th><th>MIN</th><th>❤️</th><th>kg</th><th>BMI</th></tr>';
+  rows.forEach(function(r) {
+    var p = r.d.split("-");
+    h += '<tr><td>' + p[2] + '/' + p[1] + '/' + p[0].slice(2) + '</td><td>' + prNf(r.max, 0) + '</td><td>' + prNf(r.min, 0) + '</td><td>' + prNf(r.bpm, 0) + '</td><td>' + prNf(r.kg, 1) + '</td><td>' + prNf(r.bmi, 1) + '</td></tr>';
+  });
+  h += '</table>';
+  var anno = new Date().getFullYear();
+  var rowsAnno = rows.filter(function(r){ return r.d.slice(0, 4) == anno; });
+  h += '<div class="avg"><div><b>Anno ' + anno + '</b>: ' + prNf(prAvg(rowsAnno, "max"), 0) + '/' + prNf(prAvg(rowsAnno, "min"), 0) + ' · ❤️ ' + prNf(prAvg(rowsAnno, "bpm"), 0) + ' · ⚖️ ' + prNf(prAvg(rowsAnno, "kg"), 1) + ' · BMI ' + prNf(prAvg(rowsAnno, "bmi"), 1) + '</div></div>';
+  h += '<h3 style="margin:14px 0 6px;color:#000">Grafico</h3>' + prChart(rows);
+  var pp = $("prPrint"); pp.innerHTML = h; pp.classList.add("show"); pp.style.display = "block";
+  try { window.print(); } catch (e) { /* anteprima sandbox: il riepilogo resta a schermo */ }
+  try { var a = document.createElement("a"); a.download = "pressione-riepilogo-" + anno + ".html"; a.href = "data:text/html;charset=utf-8," + encodeURIComponent('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Riepilogo pressione</title></head><body style="font-family:sans-serif;background:#fff;color:#000">' + h + '</body></html>'); document.body.appendChild(a); a.click(); document.body.removeChild(a); } catch (e) {}
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", prRender); else prRender();
 </script>
+<section id="press">
+  <h2>Pressione — tracker personale</h2>
+  <fieldset>
+    <legend>🫀 Pressione &amp; pulsazioni</legend>
+    <div class="g2">
+      <div><label for="prData">Data</label><input id="prData" type="date" /></div>
+      <div><label for="prBpm">Pulsazioni (bpm)</label><input id="prBpm" type="number" inputmode="decimal" placeholder="es. 62" /></div>
+      <div><label for="prMax">Massima (valore)</label><input id="prMax" type="number" inputmode="decimal" placeholder="es. 120" /></div>
+      <div><label for="prMaxN">Nome massima</label><input id="prMaxN" type="text" value="Sistolica" /></div>
+      <div><label for="prMin">Minima (valore)</label><input id="prMin" type="number" inputmode="decimal" placeholder="es. 80" /></div>
+      <div><label for="prMinN">Nome minima</label><input id="prMinN" type="text" value="Diastolica" /></div>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>⚖️ Corpo — altezza, peso, BMI</legend>
+    <div class="g2">
+      <div><label for="prAltezza">Altezza (cm) — per il BMI, salvata</label><input id="prAltezza" type="number" inputmode="decimal" placeholder="es. 178" oninput="prBmiCalc()" /></div>
+      <div><label for="prKg">Peso (kg)</label><input id="prKg" type="number" inputmode="decimal" placeholder="es. 78,5" oninput="prBmiCalc()" /></div>
+      <div><label for="prBmi">BMI (automatico)</label><input id="prBmi" type="text" readonly placeholder="—" /></div>
+    </div>
+  </fieldset>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" style="flex:3 1 0;width:auto;font-size:16px;padding:13px;font-weight:800" onclick="prSave()">💾 Salva misurazione</button>
+      <button class="btn" id="prEditBtn" style="flex:2 1 0;width:auto;display:none;font-size:13px;padding:11px;background:rgba(96,165,250,.25);color:#60a5fa;font-weight:700" onclick="prSave()">✏️ Salva correzione</button>
+      <button class="btn" id="prAnnullaBtn" style="flex:2 1 0;width:auto;display:none;font-size:13px;padding:11px" onclick="prAnnulla()">Annulla</button>
+      <button class="btn" id="printBtn" style="flex:2 1 0;width:auto;font-size:13px;padding:11px;font-weight:700" onclick="prExport()">📄 Esporta PDF</button>
+    </div>
+  </fieldset>
+  <div id="prOut"></div>
+  <h2 style="font-size:16px;margin:16px 4px 6px">📅 Riepilogo anno calendariale</h2>
+  <div id="prAnno" style="margin:4px"></div>
+  <div id="prPrint"></div>
+</section>
+
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
